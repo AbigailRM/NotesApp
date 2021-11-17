@@ -1,0 +1,122 @@
+/*
+ * Copyright (C) 2017 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.google.android.material.button;
+
+import com.google.android.material.R;
+
+import static androidx.annotation.RestrictTo.Scope.LIBRARY_GROUP;
+import static com.google.android.material.theme.overlay.MaterialThemeOverlay.wrap;
+
+import android.content.Context;
+import android.content.res.ColorStateList;
+import android.content.res.TypedArray;
+import android.graphics.Paint;
+import android.graphics.PorterDuff;
+import android.graphics.PorterDuff.Mode;
+import android.graphics.Rect;
+import android.graphics.drawable.Drawable;
+import android.os.Build.VERSION;
+import android.os.Build.VERSION_CODES;
+import android.os.Parcel;
+import android.os.Parcelable;
+import androidx.core.graphics.drawable.DrawableCompat;
+import androidx.core.view.ViewCompat;
+import androidx.core.widget.TextViewCompat;
+import androidx.appcompat.content.res.AppCompatResources;
+import androidx.appcompat.widget.AppCompatButton;
+import android.util.AttributeSet;
+import android.util.Log;
+import android.view.accessibility.AccessibilityEvent;
+import android.view.accessibility.AccessibilityNodeInfo;
+import android.widget.Button;
+import android.widget.Checkable;
+import android.widget.CompoundButton;
+import androidx.annotation.ColorInt;
+import androidx.annotation.ColorRes;
+import androidx.annotation.DimenRes;
+import androidx.annotation.Dimension;
+import androidx.annotation.DrawableRes;
+import androidx.annotation.IntDef;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.annotation.Px;
+import androidx.annotation.RequiresApi;
+import androidx.annotation.RestrictTo;
+import androidx.customview.view.AbsSavedState;
+import com.google.android.material.internal.ThemeEnforcement;
+import com.google.android.material.internal.ViewUtils;
+import com.google.android.material.resources.MaterialResources;
+import com.google.android.material.shape.MaterialShapeUtils;
+import com.google.android.material.shape.ShapeAppearanceModel;
+import com.google.android.material.shape.Shapeable;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.util.LinkedHashSet;
+
+/**
+ * A convenience class for creating a new Material button.
+ *
+ * <p>This class supplies updated Material styles for the button in the constructor. The widget will
+ * display the correct default Material styles without the use of the style flag.
+ *
+ * <p>All attributes from {@code com.google.android.material.R.styleable#MaterialButton} are
+ * supported. Do not use the {@code android:background} attribute. MaterialButton manages its own
+ * background drawable, and setting a new background means {@link MaterialButton} can no longer
+ * guarantee that the new attributes it introduces will function properly. If the default background
+ * is changed, {@link MaterialButton} cannot guarantee well-defined behavior.
+ *
+ * <p>For filled buttons, this class uses your theme's {@code ?attr/colorPrimary} for the background
+ * tint color and {@code ?attr/colorOnPrimary} for the text color. For unfilled buttons, this class
+ * uses {@code ?attr/colorPrimary} for the text color and transparent for the background tint.
+ *
+ * <p>Add icons to the start, center, or end of this button using the {@link R.attr#icon app:icon},
+ * {@link R.attr#iconPadding app:iconPadding}, {@link R.attr#iconTint app:iconTint}, {@link
+ * R.attr#iconTintMode app:iconTintMode} and {@link R.attr#iconGravity app:iconGravity} attributes.
+ *
+ * <p>If a start-aligned icon is added to this button, please use a style like one of the ".Icon"
+ * styles specified in the default MaterialButton styles. The ".Icon" styles adjust padding slightly
+ * to achieve a better visual balance. This style should only be used with a start-aligned icon
+ * button. If your icon is end-aligned, you cannot use a ".Icon" style and must instead manually
+ * adjust your padding such that the visual adjustment is mirrored.
+ *
+ * <p>Specify background tint using the {@link R.attr#backgroundTint app:backgroundTint} and {@link
+ * R.attr#backgroundTintMode app:backgroundTintMode} attributes, which accepts either a color or a
+ * color state list.
+ *
+ * <p>Ripple color / press state color can be specified using the {@link R.attr#rippleColor
+ * app:rippleColor} attribute. Ripple opacity will be determined by the Android framework when
+ * available. Otherwise, this color will be overlaid on the button at a 50% opacity when button is
+ * pressed.
+ *
+ * <p>Set the stroke color using the {@link R.attr#strokeColor app:strokeColor} attribute, which
+ * accepts either a color or a color state list. Stroke width can be set using the {@link
+ * R.attr#strokeWidth app:strokeWidth} attribute.
+ *
+ * <p>Specify the radius of all four corners of the button using the {@link R.attr#cornerRadius
+ * app:cornerRadius} attribute.
+ */
+public class MaterialButton extends AppCompatButton implements Checkable, Shapeable {
+
+  /** Interface definition for a callback to be invoked when the button checked state changes. */
+  public interface OnCheckedChangeListener {
+    /**
+     * Called when the checked state of a MaterialButton has changed.
+     *
+     * @param button The MaterialButton whose state has changed.
+     * @param isChecked The new checked state of MaterialButton.
+     */
+    void onCheckedChanged(MaterialButton button, boolean isChecke

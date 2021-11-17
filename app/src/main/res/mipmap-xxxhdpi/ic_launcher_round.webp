@@ -1,0 +1,176 @@
+/*
+ * Copyright 2019 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package androidx.fragment.app;
+
+import android.animation.Animator;
+import android.animation.AnimatorListenerAdapter;
+import android.content.Context;
+import android.graphics.Rect;
+import android.util.Log;
+import android.view.View;
+import android.view.ViewGroup;
+import android.view.animation.Animation;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.collection.ArrayMap;
+import androidx.core.app.SharedElementCallback;
+import androidx.core.os.CancellationSignal;
+import androidx.core.util.Preconditions;
+import androidx.core.view.OneShotPreDrawListener;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.ViewGroupCompat;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * A SpecialEffectsController that hooks into the existing Fragment APIs to run
+ * animations and transitions.
+ */
+class DefaultSpecialEffectsController extends SpecialEffectsController {
+
+    DefaultSpecialEffectsController(@NonNull ViewGroup container) {
+        super(container);
+    }
+
+    @Override
+    void executeOperations(@NonNull List<Operation> operations, boolean isPop) {
+        // Shared element transitions are done between the first fragment leaving and
+        // the last fragment coming in. Finding these operations is the first priority
+        Operation firstOut = null;
+        Operation lastIn = null;
+        for (final Operation operation : operations) {
+            Operation.State currentState = Operation.State.from(operation.getFragment().mView);
+            switch (operation.getFinalState()) {
+                case GONE:
+                case INVISIBLE:
+                case REMOVED:
+                    if (currentState == Operation.State.VISIBLE && firstOut == null) {
+                        // The firstOut Operation is the first Operation moving from VISIBLE
+                        firstOut = operation;
+                    }
+                    break;
+                case VISIBLE:
+                    if (currentState != Operation.State.VISIBLE) {
+                        // The last Operation that moves to VISIBLE is the lastIn Operation
+                        lastIn = operation;
+                    }
+                    break;
+            }
+        }
+
+        // Now iterate through the operations, collecting the set of animations
+        // and transitions that need to be executed
+        List<AnimationInfo> animations = new ArrayList<>();
+        List<TransitionInfo> transitions = new ArrayList<>();
+        final List<Operation> awaitingContainerChanges = new ArrayList<>(operations);
+
+        for (final Operation operation : operations) {
+            // Create the animation CancellationSignal
+            CancellationSignal animCancellationSignal = new CancellationSignal();
+            operation.markStartedSpecialEffect(animCancellationSignal);
+            // Add the animation special effect
+            animations.add(new AnimationInfo(operation, animCancellationSignal, isPop));
+
+            // Create the transition CancellationSignal
+            CancellationSignal transitionCancellationSignal = new CancellationSignal();
+            operation.markStartedSpecialEffect(transitionCancellationSignal);
+            // Add the transition special effect
+            transitions.add(new TransitionInfo(operation, transitionCancellationSignal, isPop,
+                    isPop ? operation == firstOut : operation == lastIn));
+
+            // Ensure that if the Operation is synchronously complete, we still
+            // apply the container changes before the Operation completes
+            operation.addCompletionListener(new Runnable() {
+                @Override
+                public void run() {
+                    if (awaitingContainerChanges.contains(operation)) {
+                        awaitingContainerChanges.remove(operation);
+                        applyContainerChanges(operation);
+                    }
+                }
+            });
+        }
+
+        // Start transition special effects
+        Map<Operation, Boolean> startedTransitions = startTransitions(transitions,
+                awaitingContainerChanges, isPop, firstOut, lastIn);
+        boolean startedAnyTransition = startedTransitions.containsValue(true);
+
+        // Start animation special effects
+        startAnimations(animations, awaitingContainerChanges,
+                startedAnyTransition, startedTransitions);
+
+        for (final Operation operation : awaitingContainerChanges) {
+            applyContainerChanges(operation);
+        }
+        awaitingContainerChanges.clear();
+    }
+
+    private void startAnimations(@NonNull List<AnimationInfo> animationInfos,
+            @NonNull List<Operation> awaitingContainerChanges,
+            boolean startedAnyTransition, @NonNull Map<Operation, Boolean> startedTransitions) {
+        final ViewGroup container = getContainer();
+        final Context context = container.getContext();
+        ArrayList<AnimationInfo> animationsToRun = new ArrayList<>();
+
+        // First run Animators
+        boolean startedAnyAnimator = false;
+        for (final AnimationInfo animationInfo : animationInfos) {
+            if (animationInfo.isVisibilityUnchanged()) {
+                // No change in visibility, so we can immediately complete the animation
+                animationInfo.completeSpecialEffect();
+                continue;
+            }
+            FragmentAnim.AnimationOrAnimator anim = animationInfo.getAnimation(context);
+            if (anim == null) {
+                // No Animator or Animation, so we can immediately complete the animation
+                animationInfo.completeSpecialEffect();
+                continue;
+            }
+            final Animator animator = anim.animator;
+            if (animator == null) {
+                // We must have an Animation to run. Save those for a second pass
+                animationsToRun.add(animationInfo);
+                continue;
+            }
+
+            // First make sure we haven't already started a Transition for this Operation
+            final Operation operation = animationInfo.getOperation();
+            final Fragment fragment = operation.getFragment();
+            boolean startedTransition = Boolean.TRUE.equals(startedTransitions.get(operation));
+            if (startedTransition) {
+                if (FragmentManager.isLoggingEnabled(Log.VERBOSE)) {
+                    Log.v(FragmentManager.TAG, "Ignoring Animator set on "
+                            + fragment + " as this Fragment was involved in a Transition.");
+                }
+                animationInfo.completeSpecialEffect();
+                continue;
+            }
+
+            // Okay, let's run the Animator!
+            startedAnyAnimator = true;
+            final boolean isHideOperation = operation.getFinalState() == Operation.State.GONE;
+            if (isHideOperation) {
+                // We don't want to immediately applyState() to hide operations as that
+                // immediately stops the Animator. Instead we'll applyState() manually
+                // 

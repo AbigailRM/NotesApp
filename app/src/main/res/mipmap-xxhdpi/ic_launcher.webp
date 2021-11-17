@@ -1,0 +1,80 @@
+/*
+ * Copyright 2018 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package androidx.fragment.app;
+
+import android.util.Log;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.lifecycle.Lifecycle;
+
+import java.io.PrintWriter;
+import java.util.ArrayList;
+
+/**
+ * Entry of an operation on the fragment back stack.
+ */
+final class BackStackRecord extends FragmentTransaction implements
+        FragmentManager.BackStackEntry, FragmentManager.OpGenerator {
+    private static final String TAG = FragmentManager.TAG;
+
+    final FragmentManager mManager;
+
+    boolean mCommitted;
+    int mIndex = -1;
+
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder(128);
+        sb.append("BackStackEntry{");
+        sb.append(Integer.toHexString(System.identityHashCode(this)));
+        if (mIndex >= 0) {
+            sb.append(" #");
+            sb.append(mIndex);
+        }
+        if (mName != null) {
+            sb.append(" ");
+            sb.append(mName);
+        }
+        sb.append("}");
+        return sb.toString();
+    }
+
+    public void dump(String prefix, PrintWriter writer) {
+        dump(prefix, writer, true);
+    }
+
+    public void dump(String prefix, PrintWriter writer, boolean full) {
+        if (full) {
+            writer.print(prefix); writer.print("mName="); writer.print(mName);
+                    writer.print(" mIndex="); writer.print(mIndex);
+                    writer.print(" mCommitted="); writer.println(mCommitted);
+            if (mTransition != FragmentTransaction.TRANSIT_NONE) {
+                writer.print(prefix); writer.print("mTransition=#");
+                        writer.print(Integer.toHexString(mTransition));
+            }
+            if (mEnterAnim != 0 || mExitAnim !=0) {
+                writer.print(prefix); writer.print("mEnterAnim=#");
+                        writer.print(Integer.toHexString(mEnterAnim));
+                        writer.print(" mExitAnim=#");
+                        writer.println(Integer.toHexString(mExitAnim));
+            }
+            if (mPopEnterAnim != 0 || mPopExitAnim !=0) {
+                writer.print(prefix); writer.print("mPopEnterAnim=#");
+                        writer.print(Integer.toHexString(mPopEnterAnim));
+                        writer.print(" mPopExitAnim=#");
+         

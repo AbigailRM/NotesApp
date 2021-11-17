@@ -10,6 +10,21 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.NotesApp">
         <activity
+            android:name=".databaseObj.AddingNoteActivity"
+            android:exported="false" />
+        <activity
+            android:name=".generalFiles.manage.SignUpActivity"
+            android:exported="false" />
+        <activity
+            android:name=".generalFiles.manage.ForgotPassActivity"
+            android:exported="false" />
+        <activity
+            android:name=".generalFiles.PrincipalActivity"
+            android:exported="false" />
+        <activity
+            android:name=".generalFiles.HomeActivity"
+            android:exported="false" />
+        <activity
             android:name=".MainActivity"
             android:exported="true">
             <intent-filter>

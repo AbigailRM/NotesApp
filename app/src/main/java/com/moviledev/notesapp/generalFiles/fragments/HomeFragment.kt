@@ -7,6 +7,10 @@ import android.view.View
 import android.view.ViewGroup
 import com.moviledev.notesapp.R
 
+enum class ProviderType{
+    BASIC
+}
+
 class HomeFragment : Fragment() {
 
     override fun onCreate(savedInstanceState: Bundle?) {

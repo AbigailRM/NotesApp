@@ -4,34 +4,40 @@
 
     <application
         android:allowBackup="true"
-        android:icon="@mipmap/ic_launcher"
+        android:icon="@mipmap/ic_launcher_note"
         android:label="@string/app_name"
-        android:roundIcon="@mipmap/ic_launcher_round"
+        android:roundIcon="@mipmap/ic_launcher_note_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.NotesApp">
         <activity
-            android:name=".databaseObj.AddingNoteActivity"
-            android:exported="false" />
+            android:name=".generalFiles.manage.CreateNoteActivity"
+            android:exported="true" />
+        <meta-data
+            android:name="android.support.PARENT_ACTIVITY"
+            android:value=".MainActivity"
+            />
         <activity
             android:name=".generalFiles.manage.SignUpActivity"
-            android:exported="false" />
+            android:exported="true" />
         <activity
             android:name=".generalFiles.manage.ForgotPassActivity"
-            android:exported="false" />
+            android:exported="true" />
         <activity
-            android:name=".generalFiles.PrincipalActivity"
-            android:exported="false" />
+            android:name=".generalFiles.manage.PrincipalActivity"
+            android:exported="true">
+        <intent-filter>
+            <action android:name="android.intent.action.MAIN" />
+
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent-filter>
+        </activity>
         <activity
             android:name=".generalFiles.HomeActivity"
-            android:exported="false" />
+            android:exported="true" />
         <activity
             android:name=".MainActivity"
             android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
 
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
         </activity>
     </application>
 
